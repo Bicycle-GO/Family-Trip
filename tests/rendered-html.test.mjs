@@ -56,6 +56,7 @@ test("keeps all three days in source and removes the starter preview", async () 
   assert.match(tripData, /time: "07:00"/);
   assert.match(tripData, /time: "16:00–17:10"/);
   assert.match(tripData, /서대문형무소역사관/);
-  assert.match(tripData, /time: "15:20–20:00"/);
+  assert.match(tripData, /전쟁기념관/);
+  assert.match(tripData, /time: "20:00"/);
   await assert.rejects(access(new URL("../app/_sites-preview", templateRoot)));
 });
