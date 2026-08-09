@@ -2,11 +2,19 @@
 
 2026년 8월 서울 2박 3일 가족 역사여행을 날짜별 지도와 일정으로 보여주는 웹앱입니다.
 
+- GitHub Pages: https://bicycle-go.github.io/Family-Trip/
+
 ## 실행
 
 ```bash
 npm install
 npm run dev
+```
+
+GitHub Pages 또는 Vercel용 정적 빌드는 다음 명령으로 생성합니다.
+
+```bash
+npm run build:pages
 ```
 
 ## 확인
