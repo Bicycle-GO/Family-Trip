@@ -18,7 +18,11 @@ type LeafletMap = LeafletLayer & {
     bounds: [number, number][],
     options?: Record<string, unknown>,
   ) => void;
-  panTo: (coords: [number, number], options?: Record<string, unknown>) => void;
+  setView: (
+    coords: [number, number],
+    zoom: number,
+    options?: Record<string, unknown>,
+  ) => void;
   remove: () => void;
   invalidateSize: () => void;
 };
@@ -54,7 +58,12 @@ type WeatherForecast = {
 
 const MAP_TILES: Record<
   MapStyle,
-  { url: string; attribution: string; className: string }
+  {
+    url: string;
+    attribution: string;
+    className: string;
+    labelUrl?: string;
+  }
 > = {
   street: {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -66,6 +75,8 @@ const MAP_TILES: Record<
     attribution:
       "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
     className: "map-tiles--satellite",
+    labelUrl:
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
   },
 };
 
@@ -146,6 +157,7 @@ export function JourneyPlanner() {
   const [activeDayId, setActiveDayId] = useState<DayPlan["id"]>("day1");
   const [selectedStopId, setSelectedStopId] = useState("d1-history");
   const [mapStyle, setMapStyle] = useState<MapStyle>("street");
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [mapState, setMapState] = useState<"loading" | "ready" | "error">(
     "loading",
   );
@@ -158,10 +170,11 @@ export function JourneyPlanner() {
   const mapElementRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const baseLayerRef = useRef<LeafletLayer | null>(null);
+  const labelLayerRef = useRef<LeafletLayer | null>(null);
   const baseLayerStyleRef = useRef<MapStyle | null>(null);
   const itineraryLayerRef = useRef<LeafletLayer | null>(null);
   const markerRefs = useRef<Record<string, LeafletLayer>>({});
-  const listRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
 
   const activeDay = useMemo(
     () => dayPlans.find((day) => day.id === activeDayId) ?? dayPlans[0],
@@ -257,6 +270,7 @@ export function JourneyPlanner() {
       mapRef.current?.remove();
       mapRef.current = null;
       baseLayerRef.current = null;
+      labelLayerRef.current = null;
       baseLayerStyleRef.current = null;
     };
   }, []);
@@ -267,6 +281,8 @@ export function JourneyPlanner() {
     if (!L || !map || mapState !== "ready") return;
     if (baseLayerStyleRef.current === mapStyle) return;
 
+    labelLayerRef.current?.remove?.();
+    labelLayerRef.current = null;
     baseLayerRef.current?.remove?.();
     const tileConfig = MAP_TILES[mapStyle];
     baseLayerRef.current = L.tileLayer(tileConfig.url, {
@@ -274,6 +290,12 @@ export function JourneyPlanner() {
       attribution: tileConfig.attribution,
       className: tileConfig.className,
     }).addTo(map);
+    if (tileConfig.labelUrl) {
+      labelLayerRef.current = L.tileLayer(tileConfig.labelUrl, {
+        maxZoom: 19,
+        className: "map-tiles--labels",
+      }).addTo(map);
+    }
     baseLayerStyleRef.current = mapStyle;
   }, [mapState, mapStyle]);
 
@@ -327,20 +349,20 @@ export function JourneyPlanner() {
 
     const mobile = window.matchMedia("(max-width: 760px)").matches;
     map.fitBounds(placeCoordinates, {
-      paddingTopLeft: mobile ? [38, 88] : [470, 84],
+      paddingTopLeft: mobile || !isPanelOpen ? [72, 88] : [470, 84],
       paddingBottomRight: mobile ? [38, 130] : [72, 72],
       maxZoom: activeDay.id === "day3" ? 13 : 12,
       animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     });
 
     window.setTimeout(() => map.invalidateSize(), 120);
-  }, [activeDay, mapState]);
+  }, [activeDay, isPanelOpen, mapState]);
 
   function changeDay(day: DayPlan) {
     setActiveDayId(day.id);
     const firstMappedStop = day.stops.find((stop) => stop.placeId);
     setSelectedStopId(firstMappedStop?.id ?? day.stops[0].id);
-    listRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    panelRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function selectStop(stop: TripStop) {
@@ -352,14 +374,17 @@ export function JourneyPlanner() {
       closeButton: false,
       offset: [0, -2],
     });
-    marker?.openPopup?.();
-    mapRef.current?.panTo([place.lat, place.lng], {
+    mapRef.current?.setView([place.lat, place.lng], 16, {
       animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     });
+    marker?.openPopup?.();
   }
 
   return (
-    <main className="trip-app" style={{ "--day-color": activeDay.color } as CSSProperties}>
+    <main
+      className={`trip-app${isPanelOpen ? "" : " trip-app--panel-hidden"}`}
+      style={{ "--day-color": activeDay.color } as CSSProperties}
+    >
       <a className="skip-link" href="#itinerary-list">
         일정 목록으로 건너뛰기
       </a>
@@ -423,7 +448,25 @@ export function JourneyPlanner() {
         </div>
       </section>
 
-      <aside className="itinerary-panel" aria-label="가족여행 일정">
+      <button
+        type="button"
+        className={`panel-visibility-toggle${isPanelOpen ? " is-open" : ""}`}
+        onClick={() => setIsPanelOpen((open) => !open)}
+        aria-controls="trip-itinerary-panel"
+        aria-expanded={isPanelOpen}
+        aria-label={isPanelOpen ? "여행 일정 메뉴 숨기기" : "여행 일정 메뉴 보기"}
+      >
+        <span aria-hidden="true">{isPanelOpen ? "‹" : "›"}</span>
+        {!isPanelOpen && <strong>일정 보기</strong>}
+      </button>
+
+      <aside
+        ref={panelRef}
+        id="trip-itinerary-panel"
+        className="itinerary-panel"
+        aria-label="가족여행 일정"
+        hidden={!isPanelOpen}
+      >
         <header className="panel-header">
           <p className="trip-kicker">2026. 08. 12 — 08. 14</p>
           <h1>서울 역사 가족여행</h1>
@@ -462,7 +505,7 @@ export function JourneyPlanner() {
           </div>
         )}
 
-        <div className="itinerary-scroll" ref={listRef} id="itinerary-list">
+        <div className="itinerary-scroll" id="itinerary-list">
           <ol className="stop-list">
             {activeDay.stops.map((stop) => {
               const selected = stop.id === selectedStopId;
