@@ -175,6 +175,7 @@ export function JourneyPlanner() {
   const itineraryLayerRef = useRef<LeafletLayer | null>(null);
   const markerRefs = useRef<Record<string, LeafletLayer>>({});
   const panelRef = useRef<HTMLElement>(null);
+  const panelBodyRef = useRef<HTMLDivElement>(null);
 
   const activeDay = useMemo(
     () => dayPlans.find((day) => day.id === activeDayId) ?? dayPlans[0],
@@ -363,6 +364,7 @@ export function JourneyPlanner() {
     const firstMappedStop = day.stops.find((stop) => stop.placeId);
     setSelectedStopId(firstMappedStop?.id ?? day.stops[0].id);
     panelRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    panelBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function selectStop(stop: TripStop) {
@@ -456,7 +458,7 @@ export function JourneyPlanner() {
         aria-expanded={isPanelOpen}
         aria-label={isPanelOpen ? "여행 일정 메뉴 숨기기" : "여행 일정 메뉴 보기"}
       >
-        <span aria-hidden="true">{isPanelOpen ? "‹" : "›"}</span>
+        <span aria-hidden="true">{isPanelOpen ? "−" : "+"}</span>
         {!isPanelOpen && <strong>일정 보기</strong>}
       </button>
 
@@ -489,90 +491,92 @@ export function JourneyPlanner() {
           ))}
         </nav>
 
-        <div className="day-intro">
-          <p>{activeDay.eyebrow}</p>
-          <h2>{activeDay.theme}</h2>
-          <div className="day-facts">
-            <span>{activeDay.distanceNote}</span>
-            <span>{activeDay.summary}</span>
+        <div className="panel-scroll-body" ref={panelBodyRef}>
+          <div className="day-intro">
+            <p>{activeDay.eyebrow}</p>
+            <h2>{activeDay.theme}</h2>
+            <div className="day-facts">
+              <span>{activeDay.distanceNote}</span>
+              <span>{activeDay.summary}</span>
+            </div>
           </div>
-        </div>
 
-        {activeDay.alert && (
-          <div className="day-alert" role="note">
-            <strong>먼저 확인</strong>
-            <span>{activeDay.alert}</span>
-          </div>
-        )}
+          {activeDay.alert && (
+            <div className="day-alert" role="note">
+              <strong>먼저 확인</strong>
+              <span>{activeDay.alert}</span>
+            </div>
+          )}
 
-        <div className="itinerary-scroll" id="itinerary-list">
-          <ol className="stop-list">
-            {activeDay.stops.map((stop) => {
-              const selected = stop.id === selectedStopId;
-              const place = stop.placeId ? places[stop.placeId] : undefined;
-              return (
-                <li
-                  key={stop.id}
-                  id={`stop-${stop.id}`}
-                  className={selected ? "stop-item is-selected" : "stop-item"}
-                >
-                  <button
-                    type="button"
-                    className="stop-button"
-                    onClick={() => selectStop(stop)}
-                    aria-expanded={selected}
+          <div className="itinerary-scroll" id="itinerary-list">
+            <ol className="stop-list">
+              {activeDay.stops.map((stop) => {
+                const selected = stop.id === selectedStopId;
+                const place = stop.placeId ? places[stop.placeId] : undefined;
+                return (
+                  <li
+                    key={stop.id}
+                    id={`stop-${stop.id}`}
+                    className={selected ? "stop-item is-selected" : "stop-item"}
                   >
-                    <span className="stop-time">{stop.time}</span>
-                    <span className="stop-content">
-                      <span className="stop-title-row">
-                        <strong>{stop.title}</strong>
-                        {stop.status && (
-                          <span className={statusClass(stop.status)}>{stop.status}</span>
-                        )}
+                    <button
+                      type="button"
+                      className="stop-button"
+                      onClick={() => selectStop(stop)}
+                      aria-expanded={selected}
+                    >
+                      <span className="stop-time">{stop.time}</span>
+                      <span className="stop-content">
+                        <span className="stop-title-row">
+                          <strong>{stop.title}</strong>
+                          {stop.status && (
+                            <span className={statusClass(stop.status)}>{stop.status}</span>
+                          )}
+                        </span>
+                        <span className="stop-meta">{stop.meta}</span>
                       </span>
-                      <span className="stop-meta">{stop.meta}</span>
-                    </span>
-                    <span className="stop-toggle" aria-hidden="true">{selected ? "−" : "+"}</span>
-                  </button>
+                      <span className="stop-toggle" aria-hidden="true">{selected ? "−" : "+"}</span>
+                    </button>
 
-                  {selected && (
-                    <div className="stop-details">
-                      <p>{stop.detail}</p>
-                      {place && <address>{place.address}</address>}
-                      {stop.history && (
-                        <div className="history-note">
-                          <strong>역사 포인트</strong>
-                          <p>{stop.history}</p>
-                        </div>
-                      )}
-                      {stop.question && (
-                        <blockquote>
-                          <span>함께 이야기해 보기</span>
-                          “{stop.question}”
-                        </blockquote>
-                      )}
-                      {place && (
-                        <a
-                          className="map-search-link"
-                          href={`https://map.kakao.com/link/search/${encodeURIComponent(place.name)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          카카오맵에서 장소 보기 <span aria-hidden="true">↗</span>
-                        </a>
-                      )}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
+                    {selected && (
+                      <div className="stop-details">
+                        <p>{stop.detail}</p>
+                        {place && <address>{place.address}</address>}
+                        {stop.history && (
+                          <div className="history-note">
+                            <strong>역사 포인트</strong>
+                            <p>{stop.history}</p>
+                          </div>
+                        )}
+                        {stop.question && (
+                          <blockquote>
+                            <span>함께 이야기해 보기</span>
+                            “{stop.question}”
+                          </blockquote>
+                        )}
+                        {place && (
+                          <a
+                            className="map-search-link"
+                            href={`https://map.kakao.com/link/search/${encodeURIComponent(place.name)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            카카오맵에서 장소 보기 <span aria-hidden="true">↗</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
 
-          <footer className="panel-footer">
-            <strong>출발 전 마지막 확인</strong>
-            <p>8월 11일에 날씨, 궁궐 운영 공지와 실시간 교통을 다시 확인하세요.</p>
-            <span>식당과 전주 출발지는 아직 확정되지 않았습니다.</span>
-          </footer>
+            <footer className="panel-footer">
+              <strong>출발 전 마지막 확인</strong>
+              <p>8월 11일에 날씨, 궁궐 운영 공지와 실시간 교통을 다시 확인하세요.</p>
+              <span>식당과 전주 출발지는 아직 확정되지 않았습니다.</span>
+            </footer>
+          </div>
         </div>
       </aside>
     </main>

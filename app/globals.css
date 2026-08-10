@@ -375,6 +375,10 @@ button {
   display: none;
 }
 
+.panel-scroll-body {
+  min-height: 0;
+}
+
 .panel-header {
   padding: 24px 24px 18px;
   border-bottom: 1px solid var(--line);
@@ -819,8 +823,9 @@ button {
 
 @media (max-width: 760px) {
   .trip-app {
+    height: 100svh;
     min-height: 100svh;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .map-shell,
@@ -828,7 +833,7 @@ button {
   .map-fallback {
     position: fixed;
     bottom: auto;
-    height: 44svh;
+    height: 50svh;
   }
 
   .trip-app--panel-hidden .map-shell,
@@ -879,68 +884,122 @@ button {
   }
 
   .panel-visibility-toggle {
-    top: 12px;
-    left: 12px;
+    top: auto;
+    right: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    left: 50%;
+    min-width: 108px;
+    height: 38px;
+    transform: translateX(-50%);
   }
 
   .panel-visibility-toggle.is-open {
-    top: calc(40svh + 8px);
-    right: 12px;
-    left: auto;
+    top: calc(48svh - 16px);
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    width: 64px;
+    height: 32px;
+    border-radius: 999px;
+    transform: translateX(-50%);
+  }
+
+  .panel-visibility-toggle.is-open > span {
+    font-size: 22px;
+    transform: translateY(-1px);
+  }
+
+  .panel-visibility-toggle:not(.is-open) > span {
+    font-size: 18px;
+  }
+
+  .panel-visibility-toggle:not(.is-open) {
+    color: #fff;
+    background: var(--ink);
   }
 
   .itinerary-panel {
-    position: relative;
-    top: auto;
-    right: auto;
-    bottom: auto;
-    left: auto;
+    position: fixed;
     z-index: 700;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
     width: 100%;
-    min-height: 64svh;
-    margin-top: 40svh;
-    overflow: visible;
+    height: 52svh;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+    flex-direction: column;
     border-right: 0;
     border-bottom: 0;
     border-left: 0;
-    border-radius: 8px 8px 0 0;
+    border-radius: 10px 10px 0 0;
     box-shadow: 0 -10px 30px rgba(23, 33, 43, 0.18);
   }
 
+  .itinerary-panel[hidden] {
+    display: none;
+  }
+
   .itinerary-panel::before {
-    display: block;
-    width: 42px;
-    height: 4px;
-    margin: 9px auto -3px;
-    background: #c5ccd0;
-    border-radius: 999px;
-    content: "";
+    display: none;
+  }
+
+  .panel-header,
+  .day-switcher {
+    flex: 0 0 auto;
+  }
+
+  .panel-scroll-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-color: #bdc5ca transparent;
+    scrollbar-width: thin;
   }
 
   .panel-header {
-    padding: 17px 20px 15px;
+    padding: 14px 20px 11px;
   }
 
   .panel-header h1 {
-    font-size: 23px;
+    font-size: 21px;
+  }
+
+  .trip-kicker {
+    margin-bottom: 4px;
+    font-size: 10px;
+  }
+
+  .trip-subtitle {
+    margin-top: 5px;
+    overflow: hidden;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .day-switcher {
-    top: 0;
+    position: relative;
+    top: auto;
+    min-height: 58px;
   }
 
   .day-switcher button {
-    min-height: 66px;
-    padding-right: 11px;
-    padding-left: 11px;
+    min-height: 58px;
+    padding: 8px 11px;
   }
 
   .day-intro {
-    padding: 16px 20px 14px;
+    padding: 14px 20px 13px;
   }
 
   .day-intro h2 {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   .day-alert {
@@ -954,7 +1013,7 @@ button {
 
   .stop-button {
     grid-template-columns: 82px minmax(0, 1fr) 24px;
-    min-height: 78px;
+    min-height: 74px;
     padding-right: 15px;
     padding-left: 20px;
   }
@@ -980,7 +1039,7 @@ button {
   }
 
   .trip-subtitle {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .day-switcher strong {
