@@ -50,11 +50,20 @@ const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 type MapStyle = "street" | "satellite";
 
 type WeatherForecast = {
-  code: number;
-  high: number;
-  low: number;
-  rainChance: number;
+  condition: string;
+  high: string;
+  low: string;
 };
+
+type WeatherResponse = {
+  source: string;
+  sourceUrl: string;
+  publishedAt: string;
+  overall: string;
+  forecasts: Partial<Record<string, WeatherForecast>>;
+};
+
+type WeatherMeta = Omit<WeatherResponse, "forecasts">;
 
 const MAP_TILES: Record<
   MapStyle,
@@ -86,18 +95,24 @@ const TRIP_DATES: Record<DayPlan["id"], string> = {
   day3: "2026-08-14",
 };
 
-function weatherLabel(code: number) {
-  if (code === 0) return { icon: "☀️", label: "맑음" };
-  if (code <= 2) return { icon: "🌤️", label: "대체로 맑음" };
-  if (code === 3) return { icon: "☁️", label: "흐림" };
-  if (code === 45 || code === 48) return { icon: "🌫️", label: "안개" };
-  if (code >= 51 && code <= 57) return { icon: "🌦️", label: "이슬비" };
-  if (code >= 61 && code <= 67) return { icon: "🌧️", label: "비" };
-  if (code >= 71 && code <= 77) return { icon: "🌨️", label: "눈" };
-  if (code >= 80 && code <= 82) return { icon: "🌦️", label: "소나기" };
-  if (code >= 85 && code <= 86) return { icon: "🌨️", label: "눈 소나기" };
-  if (code >= 95) return { icon: "⛈️", label: "뇌우" };
-  return { icon: "🌡️", label: "날씨 확인" };
+const KMA_WEATHER_URL =
+  "https://www.weather.go.kr/w/forecast/overall/short-term.do?stnId=109";
+
+function weatherIcon(condition: string) {
+  if (condition.includes("뇌우")) return "⛈️";
+  if (condition.includes("눈")) return "🌨️";
+  if (condition.includes("소나기") || condition.includes("비")) return "🌧️";
+  if (condition.includes("흐림")) return "☁️";
+  if (condition.includes("구름")) return "🌤️";
+  if (condition.includes("맑")) return "☀️";
+  return "🌡️";
+}
+
+function announcementLabel(publishedAt: string) {
+  const match = publishedAt.match(
+    /(\d{1,2})월\s*(\d{1,2})일[\s\S]*?(\d{1,2}:\d{2})\s*발표/,
+  );
+  return match ? `${Number(match[1])}.${Number(match[2])} ${match[3]} 발표` : "기상청 발표";
 }
 
 function loadLeaflet() {
@@ -167,6 +182,7 @@ export function JourneyPlanner() {
   const [weatherByDay, setWeatherByDay] = useState<
     Partial<Record<DayPlan["id"], WeatherForecast>>
   >({});
+  const [weatherMeta, setWeatherMeta] = useState<WeatherMeta | null>(null);
   const mapElementRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const baseLayerRef = useRef<LeafletLayer | null>(null);
@@ -182,55 +198,37 @@ export function JourneyPlanner() {
     [activeDayId],
   );
   const activeWeather = weatherByDay[activeDay.id];
-  const activeWeatherLabel = activeWeather
-    ? weatherLabel(activeWeather.code)
-    : null;
+  const activeWeatherIcon = activeWeather ? weatherIcon(activeWeather.condition) : null;
 
   useEffect(() => {
     const controller = new AbortController();
-    const params = new URLSearchParams({
-      latitude: "37.5665",
-      longitude: "126.9780",
-      daily:
-        "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
-      timezone: "Asia/Seoul",
-      forecast_days: "7",
-    });
 
-    fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
+    fetch("/api/weather", {
       signal: controller.signal,
     })
       .then((response) => {
         if (!response.ok) throw new Error("Weather request failed");
         return response.json();
       })
-      .then((data) => {
-        const daily = data.daily as
-          | {
-              time?: string[];
-              weather_code?: number[];
-              temperature_2m_max?: number[];
-              temperature_2m_min?: number[];
-              precipitation_probability_max?: number[];
-            }
-          | undefined;
+      .then((data: WeatherResponse) => {
         const next: Partial<Record<DayPlan["id"], WeatherForecast>> = {};
 
         dayPlans.forEach((day) => {
-          const index = daily?.time?.indexOf(TRIP_DATES[day.id]) ?? -1;
-          if (index < 0) return;
-          next[day.id] = {
-            code: daily?.weather_code?.[index] ?? -1,
-            high: daily?.temperature_2m_max?.[index] ?? 0,
-            low: daily?.temperature_2m_min?.[index] ?? 0,
-            rainChance: daily?.precipitation_probability_max?.[index] ?? 0,
-          };
+          const forecast = data.forecasts?.[TRIP_DATES[day.id]];
+          if (forecast) next[day.id] = forecast;
         });
 
-        if (Object.keys(next).length === 0) {
-          throw new Error("Trip forecast is unavailable");
+        if (!data.source || !data.sourceUrl || !data.publishedAt || !data.forecasts) {
+          throw new Error("KMA forecast response is invalid");
         }
+
         setWeatherByDay(next);
+        setWeatherMeta({
+          source: data.source,
+          sourceUrl: data.sourceUrl,
+          publishedAt: data.publishedAt,
+          overall: data.overall,
+        });
         setWeatherState("ready");
       })
       .catch((error: unknown) => {
@@ -336,10 +334,16 @@ export function JourneyPlanner() {
           offset: [0, -2],
         });
         marker.on?.("click", () => {
+          setIsPanelOpen(true);
           setSelectedStopId(primaryStop.id);
-          document
-            .getElementById(`stop-${primaryStop.id}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          window.setTimeout(() => {
+            mapRef.current?.setView([place.lat, place.lng], 16, {
+              animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+            });
+            document
+              .getElementById(`stop-${primaryStop.id}`)
+              ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }, 180);
         });
       }
 
@@ -406,23 +410,43 @@ export function JourneyPlanner() {
           </div>
         )}
         <div className="map-control-stack">
-          <section className="weather-card" aria-label={`${activeDay.date} 서울 날씨`} aria-live="polite">
+          <section
+            className="weather-card"
+            aria-label={`${activeDay.date} 서울 날씨`}
+            aria-live="polite"
+            title={weatherMeta?.overall}
+          >
             <span className="weather-card__icon" aria-hidden="true">
-              {activeWeatherLabel?.icon ?? (weatherState === "error" ? "—" : "···")}
+              {activeWeatherIcon ??
+                (weatherState === "error" ? "—" : weatherState === "ready" ? "⌛" : "···")}
             </span>
             <span className="weather-card__copy">
-              <span>{activeDay.date} 서울 예보</span>
-              {activeWeather && activeWeatherLabel ? (
+              <span>
+                {activeDay.date} 서울 · {weatherMeta ? announcementLabel(weatherMeta.publishedAt) : "기상청 발표"}
+              </span>
+              {activeWeather ? (
                 <strong>
-                  {activeWeatherLabel.label} · {Math.round(activeWeather.high)}° / {Math.round(activeWeather.low)}°
+                  {activeWeather.condition} · 최고 {activeWeather.high}° / 최저 {activeWeather.low}°
                 </strong>
               ) : (
-                <strong>{weatherState === "error" ? "예보를 확인할 수 없어요" : "날씨를 불러오는 중"}</strong>
+                <strong>
+                  {weatherState === "error"
+                    ? "예보를 확인할 수 없어요"
+                    : weatherState === "ready"
+                      ? "기상청 예보 발표 대기"
+                      : "날씨를 불러오는 중"}
+                </strong>
               )}
             </span>
-            {activeWeather && (
-              <span className="weather-card__rain">비 {activeWeather.rainChance}%</span>
-            )}
+            <a
+              className="weather-card__source"
+              href={weatherMeta?.sourceUrl ?? KMA_WEATHER_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="기상청 날씨누리에서 서울 예보 보기"
+            >
+              날씨누리 <span aria-hidden="true">↗</span>
+            </a>
           </section>
 
           <div className="map-style-switch" role="group" aria-label="지도 종류 선택">
@@ -450,17 +474,19 @@ export function JourneyPlanner() {
         </div>
       </section>
 
-      <button
-        type="button"
-        className={`panel-visibility-toggle${isPanelOpen ? " is-open" : ""}`}
-        onClick={() => setIsPanelOpen((open) => !open)}
-        aria-controls="trip-itinerary-panel"
-        aria-expanded={isPanelOpen}
-        aria-label={isPanelOpen ? "여행 일정 메뉴 숨기기" : "여행 일정 메뉴 보기"}
-      >
-        <span aria-hidden="true">{isPanelOpen ? "−" : "+"}</span>
-        {!isPanelOpen && <strong>일정 보기</strong>}
-      </button>
+      {!isPanelOpen && (
+        <button
+          type="button"
+          className="panel-reopen-button"
+          onClick={() => setIsPanelOpen(true)}
+          aria-controls="trip-itinerary-panel"
+          aria-expanded="false"
+          aria-label="여행 일정 메뉴 보기"
+        >
+          <span aria-hidden="true">+</span>
+          <strong>일정 보기</strong>
+        </button>
+      )}
 
       <aside
         ref={panelRef}
@@ -469,6 +495,19 @@ export function JourneyPlanner() {
         aria-label="가족여행 일정"
         hidden={!isPanelOpen}
       >
+        <div className="panel-handle-row">
+          <button
+            type="button"
+            className="panel-collapse-button"
+            onClick={() => setIsPanelOpen(false)}
+            aria-controls="trip-itinerary-panel"
+            aria-expanded="true"
+            aria-label="여행 일정 메뉴 숨기기"
+          >
+            <span aria-hidden="true">−</span>
+          </button>
+        </div>
+
         <header className="panel-header">
           <p className="trip-kicker">2026. 08. 12 — 08. 14</p>
           <h1>서울 역사 가족여행</h1>
@@ -541,7 +580,41 @@ export function JourneyPlanner() {
                     {selected && (
                       <div className="stop-details">
                         <p>{stop.detail}</p>
-                        {place && <address>{place.address}</address>}
+                        {place && (
+                          <article className="place-detail-card">
+                            {place.image ? (
+                              <figure>
+                                {/* External source images retain their original attribution links. */}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={place.image.src}
+                                  alt={place.image.alt}
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                                <figcaption>
+                                  사진: {" "}
+                                  <a href={place.image.sourceUrl} target="_blank" rel="noreferrer">
+                                    {place.image.credit} <span aria-hidden="true">↗</span>
+                                  </a>
+                                </figcaption>
+                              </figure>
+                            ) : (
+                              <div className="place-detail-card__placeholder" aria-label="장소 사진 준비 중">
+                                <span aria-hidden="true">{place.provisional ? "?" : place.name.slice(0, 1)}</span>
+                                <small>{place.provisional ? "장소 확정 후 사진 제공" : "장소 사진 준비 중"}</small>
+                              </div>
+                            )}
+                            <div className="place-detail-card__copy">
+                              <span className="place-detail-card__eyebrow">
+                                {place.provisional ? "방문 구역 · 장소 미정" : "장소 상세"}
+                              </span>
+                              <h3>{place.name}</h3>
+                              <p>{place.summary}</p>
+                              <address>{place.address}</address>
+                            </div>
+                          </article>
+                        )}
                         {stop.history && (
                           <div className="history-note">
                             <strong>역사 포인트</strong>

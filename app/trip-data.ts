@@ -5,6 +5,13 @@ export type Place = {
   lat: number;
   lng: number;
   provisional?: boolean;
+  summary: string;
+  image?: {
+    src: string;
+    alt: string;
+    credit: string;
+    sourceUrl: string;
+  };
 };
 
 export type TripStop = {
@@ -42,6 +49,7 @@ export const places: Record<string, Place> = {
     address: "서울 강서구 마곡중앙로 143",
     lat: 37.566148,
     lng: 126.82563,
+    summary: "마곡나루역과 서울식물원에 가까운 이번 여행의 숙소입니다. 장거리 이동 뒤 쉬고, 2일차에는 비가 그친 뒤 도심으로 출발하는 거점으로 이용합니다.",
   },
   magokMeal: {
     id: "magokMeal",
@@ -50,6 +58,7 @@ export const places: Record<string, Place> = {
     lat: 37.5661,
     lng: 126.8262,
     provisional: true,
+    summary: "호텔과 마곡나루역 주변에서 식당을 정할 예정인 구역입니다. 가족 좌석, 대기 시간, 아이가 먹기 편한 메뉴를 기준으로 당일 선택하세요.",
   },
   historyMuseum: {
     id: "historyMuseum",
@@ -57,6 +66,13 @@ export const places: Record<string, Place> = {
     address: "서울 종로구 세종대로 198",
     lat: 37.573713,
     lng: 126.978338,
+    summary: "광화문 앞에서 개항 이후 오늘까지 대한민국의 근현대사를 살펴보는 국립 박물관입니다. 가족과 함께 민주주의, 산업화, 분단과 일상의 변화를 시대순으로 연결해 보기 좋습니다.",
+    image: {
+      src: "https://commons.wikimedia.org/wiki/Special:FilePath/20240413%20National%20Museum%20of%20Korean%20Contemporary%20History.jpg?width=900",
+      alt: "광화문 앞 대한민국역사박물관 건물",
+      credit: "Jjw · CC BY 4.0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:20240413_National_Museum_of_Korean_Contemporary_History.jpg",
+    },
   },
   daehangnoMeal: {
     id: "daehangnoMeal",
@@ -65,6 +81,7 @@ export const places: Record<string, Place> = {
     lat: 37.5817,
     lng: 127.001,
     provisional: true,
+    summary: "창경궁 야간 관람 전에 저녁을 먹을 예정인 대학로·창경궁 주변 구역입니다. 관람 입장 시각과 도보 이동을 고려해 가까운 식당을 선택하세요.",
   },
   changgyeonggung: {
     id: "changgyeonggung",
@@ -72,6 +89,13 @@ export const places: Record<string, Place> = {
     address: "서울 종로구 창경궁로 185",
     lat: 37.577678,
     lng: 126.993855,
+    summary: "조선 왕실의 생활 공간이었던 궁궐로, 명정전과 통명전, 춘당지까지 이어지는 길에서 궁궐의 쓰임과 일제강점기 훼손 뒤 복원 과정을 함께 살펴볼 수 있습니다.",
+    image: {
+      src: "https://commons.wikimedia.org/wiki/Special:FilePath/Korea-Seoul-Changgyeonggung-Myeongjeongjeon-01.jpg?width=900",
+      alt: "창경궁 명정전과 앞뜰",
+      credit: "d'n'c · CC BY-SA",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Korea-Seoul-Changgyeonggung-Myeongjeongjeon-01.jpg",
+    },
   },
   anguk: {
     id: "anguk",
@@ -79,6 +103,7 @@ export const places: Record<string, Place> = {
     address: "서울 종로구 율곡로 지하 62",
     lat: 37.576477,
     lng: 126.985443,
+    summary: "창덕궁과 서울공예박물관, 북촌으로 이어지는 도심 이동 거점입니다. 3호선을 이용하며 출구에 따라 보행 거리가 달라질 수 있습니다.",
   },
   changdeokgung: {
     id: "changdeokgung",
@@ -86,6 +111,13 @@ export const places: Record<string, Place> = {
     address: "서울 종로구 율곡로 99",
     lat: 37.579032,
     lng: 126.991012,
+    summary: "자연 지형을 살린 배치로 잘 알려진 조선의 궁궐입니다. 인정전 일대와 예약제로 운영되는 후원을 함께 보면 왕실의 공식 공간과 휴식 공간의 차이를 이해하기 좋습니다.",
+    image: {
+      src: "https://commons.wikimedia.org/wiki/Special:FilePath/Changdeokgung0001.jpg?width=900",
+      alt: "창덕궁의 전각과 마당",
+      credit: "Ori~ · Public domain",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Changdeokgung0001.jpg",
+    },
   },
   angukMeal: {
     id: "angukMeal",
@@ -94,6 +126,7 @@ export const places: Record<string, Place> = {
     lat: 37.5768,
     lng: 126.9848,
     provisional: true,
+    summary: "안국역 주변에서 점심을 고를 예정인 구역입니다. 이후 일정이 실내 관람과 후원 해설로 이어지므로 이동이 짧고 대기가 적은 곳이 적합합니다.",
   },
   craftMuseum: {
     id: "craftMuseum",
@@ -101,6 +134,13 @@ export const places: Record<string, Place> = {
     address: "서울 종로구 율곡로3길 4",
     lat: 37.5767,
     lng: 126.983548,
+    summary: "옛 풍문여고 터에 자리한 공예 전문 박물관입니다. 전통 재료와 장인의 기술이 오늘의 생활과 디자인으로 어떻게 이어지는지 실내 전시로 살펴볼 수 있습니다.",
+    image: {
+      src: "https://commons.wikimedia.org/wiki/Special:FilePath/Seoul%20Museum%20of%20Craft%20Art.jpg?width=900",
+      alt: "서울공예박물관 외관",
+      credit: "Youngjin · CC BY-SA 4.0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Seoul_Museum_of_Craft_Art.jpg",
+    },
   },
   jongmyo: {
     id: "jongmyo",
@@ -108,6 +148,13 @@ export const places: Record<string, Place> = {
     address: "서울 종로구 종로 157",
     lat: 37.571035,
     lng: 126.995147,
+    summary: "조선 왕과 왕비의 신주를 모시고 제례를 올리던 왕실 사당입니다. 길게 이어진 정전과 절제된 공간 구성에서 조선 왕실의 유교적 예법을 살펴볼 수 있습니다.",
+    image: {
+      src: "https://commons.wikimedia.org/wiki/Special:FilePath/Jeongjeon%2C%20Jongmyo%20Shrine%20%28oblique%29%20-%20Seoul%2C%20Korea.jpg?width=900",
+      alt: "종묘 정전의 긴 전각",
+      credit: "Daderot · Public domain",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Jeongjeon,_Jongmyo_Shrine_(oblique)_-_Seoul,_Korea.jpg",
+    },
   },
   ikseondong: {
     id: "ikseondong",
@@ -116,6 +163,7 @@ export const places: Record<string, Place> = {
     lat: 37.5743,
     lng: 126.9898,
     provisional: true,
+    summary: "한옥 골목과 작은 식당·카페가 모인 익선동 일대입니다. 저녁 식사 뒤 기온과 가족 체력을 살펴 짧게 산책하거나 바로 쉬어 갈 수 있습니다.",
   },
   heojunMuseum: {
     id: "heojunMuseum",
@@ -123,6 +171,13 @@ export const places: Record<string, Place> = {
     address: "서울 강서구 허준로 87",
     lat: 37.568,
     lng: 126.851,
+    summary: "강서구와 인연이 깊은 의관 허준의 생애와 《동의보감》을 중심으로 조선 의학을 소개하는 박물관입니다. 사람을 살피고 지식을 책으로 나눈 의미를 가족과 이야기해 보기 좋습니다.",
+    image: {
+      src: "https://culture.gangseo.seoul.kr/resources/gsfc/img/sub/hj-img_01.jpg",
+      alt: "허준박물관 입구와 전경",
+      credit: "강서구 허준박물관",
+      sourceUrl: "https://culture.gangseo.seoul.kr/gsfc/main/contents.do?menuNo=800119",
+    },
   },
   seodaemunPrison: {
     id: "seodaemunPrison",
@@ -130,6 +185,13 @@ export const places: Record<string, Place> = {
     address: "서울 서대문구 통일로 251",
     lat: 37.574271,
     lng: 126.956071,
+    summary: "일제강점기 독립운동가들이 수감되었던 현장을 보존한 역사관입니다. 옥사와 전시관을 통해 식민지 억압, 독립운동, 민주화운동의 기억을 차분히 살펴봅니다.",
+    image: {
+      src: "https://commons.wikimedia.org/wiki/Special:FilePath/Seodaemun%20Prison%2020190331%20162931.jpg?width=900",
+      alt: "붉은 벽돌로 지어진 서대문형무소역사관",
+      credit: "H. Y. Shin 000 · CC0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Seodaemun_Prison_20190331_162931.jpg",
+    },
   },
   warMemorial: {
     id: "warMemorial",
@@ -137,6 +199,13 @@ export const places: Record<string, Place> = {
     address: "서울 용산구 이태원로 29",
     lat: 37.53653,
     lng: 126.977139,
+    summary: "한반도의 전쟁사와 6·25전쟁, 국군의 역사를 전시하는 기념관입니다. 전쟁의 과정뿐 아니라 희생과 평화의 의미에 초점을 두고 핵심 전시를 골라 관람합니다.",
+    image: {
+      src: "https://commons.wikimedia.org/wiki/Special:FilePath/War%20Memorial%20Korea%2020150623%2018%20%2819044457186%29.jpg?width=900",
+      alt: "서울 용산 전쟁기념관 전경",
+      credit: "Jeon Han / Korea.net · CC BY-SA",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:War_Memorial_Korea_20150623_18_(19044457186).jpg",
+    },
   },
   yongsanMeal: {
     id: "yongsanMeal",
@@ -145,6 +214,7 @@ export const places: Record<string, Place> = {
     lat: 37.5354,
     lng: 126.9739,
     provisional: true,
+    summary: "전쟁기념관 관람 뒤 저녁과 휴식을 위해 잡은 삼각지·용산 주변 구역입니다. 전주로 출발하기 전 주차, 화장실, 운전자 휴식 시간을 함께 확보하세요.",
   },
 };
 
