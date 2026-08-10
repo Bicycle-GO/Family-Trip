@@ -5,6 +5,7 @@ import { dayPlans, places, type DayPlan, type TripStop } from "./trip-data";
 
 type LeafletLayer = {
   addTo: (target: LeafletMap | LeafletLayer) => LeafletLayer;
+  remove?: () => void;
   bindPopup?: (content: string, options?: Record<string, unknown>) => LeafletLayer;
   openPopup?: () => void;
   on?: (event: string, handler: () => void) => LeafletLayer;
@@ -26,10 +27,6 @@ type LeafletApi = {
   map: (element: HTMLElement, options?: Record<string, unknown>) => LeafletMap;
   tileLayer: (url: string, options?: Record<string, unknown>) => LeafletLayer;
   layerGroup: () => LeafletLayer;
-  polyline: (
-    coords: [number, number][],
-    options?: Record<string, unknown>,
-  ) => LeafletLayer;
   marker: (
     coords: [number, number],
     options?: Record<string, unknown>,
@@ -45,6 +42,52 @@ declare global {
 
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+
+type MapStyle = "street" | "satellite";
+
+type WeatherForecast = {
+  code: number;
+  high: number;
+  low: number;
+  rainChance: number;
+};
+
+const MAP_TILES: Record<
+  MapStyle,
+  { url: string; attribution: string; className: string }
+> = {
+  street: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: "&copy; OpenStreetMap contributors",
+    className: "map-tiles--street",
+  },
+  satellite: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution:
+      "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+    className: "map-tiles--satellite",
+  },
+};
+
+const TRIP_DATES: Record<DayPlan["id"], string> = {
+  day1: "2026-08-12",
+  day2: "2026-08-13",
+  day3: "2026-08-14",
+};
+
+function weatherLabel(code: number) {
+  if (code === 0) return { icon: "☀️", label: "맑음" };
+  if (code <= 2) return { icon: "🌤️", label: "대체로 맑음" };
+  if (code === 3) return { icon: "☁️", label: "흐림" };
+  if (code === 45 || code === 48) return { icon: "🌫️", label: "안개" };
+  if (code >= 51 && code <= 57) return { icon: "🌦️", label: "이슬비" };
+  if (code >= 61 && code <= 67) return { icon: "🌧️", label: "비" };
+  if (code >= 71 && code <= 77) return { icon: "🌨️", label: "눈" };
+  if (code >= 80 && code <= 82) return { icon: "🌦️", label: "소나기" };
+  if (code >= 85 && code <= 86) return { icon: "🌨️", label: "눈 소나기" };
+  if (code >= 95) return { icon: "⛈️", label: "뇌우" };
+  return { icon: "🌡️", label: "날씨 확인" };
+}
 
 function loadLeaflet() {
   return new Promise<LeafletApi>((resolve, reject) => {
@@ -102,11 +145,20 @@ function statusClass(status: TripStop["status"]) {
 export function JourneyPlanner() {
   const [activeDayId, setActiveDayId] = useState<DayPlan["id"]>("day1");
   const [selectedStopId, setSelectedStopId] = useState("d1-history");
+  const [mapStyle, setMapStyle] = useState<MapStyle>("street");
   const [mapState, setMapState] = useState<"loading" | "ready" | "error">(
     "loading",
   );
+  const [weatherState, setWeatherState] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
+  const [weatherByDay, setWeatherByDay] = useState<
+    Partial<Record<DayPlan["id"], WeatherForecast>>
+  >({});
   const mapElementRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
+  const baseLayerRef = useRef<LeafletLayer | null>(null);
+  const baseLayerStyleRef = useRef<MapStyle | null>(null);
   const itineraryLayerRef = useRef<LeafletLayer | null>(null);
   const markerRefs = useRef<Record<string, LeafletLayer>>({});
   const listRef = useRef<HTMLDivElement>(null);
@@ -115,6 +167,65 @@ export function JourneyPlanner() {
     () => dayPlans.find((day) => day.id === activeDayId) ?? dayPlans[0],
     [activeDayId],
   );
+  const activeWeather = weatherByDay[activeDay.id];
+  const activeWeatherLabel = activeWeather
+    ? weatherLabel(activeWeather.code)
+    : null;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      latitude: "37.5665",
+      longitude: "126.9780",
+      daily:
+        "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+      timezone: "Asia/Seoul",
+      forecast_days: "7",
+    });
+
+    fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("Weather request failed");
+        return response.json();
+      })
+      .then((data) => {
+        const daily = data.daily as
+          | {
+              time?: string[];
+              weather_code?: number[];
+              temperature_2m_max?: number[];
+              temperature_2m_min?: number[];
+              precipitation_probability_max?: number[];
+            }
+          | undefined;
+        const next: Partial<Record<DayPlan["id"], WeatherForecast>> = {};
+
+        dayPlans.forEach((day) => {
+          const index = daily?.time?.indexOf(TRIP_DATES[day.id]) ?? -1;
+          if (index < 0) return;
+          next[day.id] = {
+            code: daily?.weather_code?.[index] ?? -1,
+            high: daily?.temperature_2m_max?.[index] ?? 0,
+            low: daily?.temperature_2m_min?.[index] ?? 0,
+            rainChance: daily?.precipitation_probability_max?.[index] ?? 0,
+          };
+        });
+
+        if (Object.keys(next).length === 0) {
+          throw new Error("Trip forecast is unavailable");
+        }
+        setWeatherByDay(next);
+        setWeatherState("ready");
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setWeatherState("error");
+      });
+
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -127,10 +238,13 @@ export function JourneyPlanner() {
           scrollWheelZoom: true,
           keyboard: true,
         });
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        const initialTiles = MAP_TILES.street;
+        baseLayerRef.current = L.tileLayer(initialTiles.url, {
           maxZoom: 19,
-          attribution: "&copy; OpenStreetMap contributors",
+          attribution: initialTiles.attribution,
+          className: initialTiles.className,
         }).addTo(map);
+        baseLayerStyleRef.current = "street";
         mapRef.current = map;
         setMapState("ready");
       })
@@ -142,8 +256,26 @@ export function JourneyPlanner() {
       mounted = false;
       mapRef.current?.remove();
       mapRef.current = null;
+      baseLayerRef.current = null;
+      baseLayerStyleRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const L = window.L;
+    const map = mapRef.current;
+    if (!L || !map || mapState !== "ready") return;
+    if (baseLayerStyleRef.current === mapStyle) return;
+
+    baseLayerRef.current?.remove?.();
+    const tileConfig = MAP_TILES[mapStyle];
+    baseLayerRef.current = L.tileLayer(tileConfig.url, {
+      maxZoom: 19,
+      attribution: tileConfig.attribution,
+      className: tileConfig.className,
+    }).addTo(map);
+    baseLayerStyleRef.current = mapStyle;
+  }, [mapState, mapStyle]);
 
   useEffect(() => {
     const L = window.L;
@@ -155,27 +287,12 @@ export function JourneyPlanner() {
     itineraryLayerRef.current = group;
     markerRefs.current = {};
 
-    const routeCoordinates = activeDay.route.map((placeId) => {
+    const uniquePlaces = [...new Set(activeDay.route)];
+    const placeCoordinates = uniquePlaces.map((placeId) => {
       const place = places[placeId];
       return [place.lat, place.lng] as [number, number];
     });
 
-    L.polyline(routeCoordinates, {
-      color: "#ffffff",
-      weight: 8,
-      opacity: 0.92,
-      lineJoin: "round",
-    }).addTo(group);
-    L.polyline(routeCoordinates, {
-      color: activeDay.color,
-      weight: 4,
-      opacity: 0.96,
-      dashArray: "10 8",
-      lineCap: "round",
-      lineJoin: "round",
-    }).addTo(group);
-
-    const uniquePlaces = [...new Set(activeDay.route)];
     uniquePlaces.forEach((placeId, index) => {
       const place = places[placeId];
       const relatedStops = activeDay.stops.filter((stop) => stop.placeId === placeId);
@@ -209,7 +326,7 @@ export function JourneyPlanner() {
     });
 
     const mobile = window.matchMedia("(max-width: 760px)").matches;
-    map.fitBounds(routeCoordinates, {
+    map.fitBounds(placeCoordinates, {
       paddingTopLeft: mobile ? [38, 88] : [470, 84],
       paddingBottomRight: mobile ? [38, 130] : [72, 72],
       maxZoom: activeDay.id === "day3" ? 13 : 12,
@@ -247,12 +364,12 @@ export function JourneyPlanner() {
         일정 목록으로 건너뛰기
       </a>
 
-      <section className="map-shell" aria-label="날짜별 여행 동선 지도">
+      <section className="map-shell" aria-label="날짜별 여행 장소 지도">
         <div
           ref={mapElementRef}
           className="trip-map"
           role="application"
-          aria-label={`${activeDay.date} 서울 여행 동선 지도`}
+          aria-label={`${activeDay.date} 서울 여행 장소 지도`}
         />
         {mapState !== "ready" && (
           <div className={`map-fallback map-fallback--${mapState}`} role="status">
@@ -261,12 +378,46 @@ export function JourneyPlanner() {
             <small>일정 목록은 그대로 확인할 수 있습니다.</small>
           </div>
         )}
-        <div className="map-caption" aria-hidden="true">
-          <span className="map-caption__dot" />
-          서울 · {activeDay.date} {activeDay.weekday}요일
+        <div className="map-control-stack">
+          <section className="weather-card" aria-label={`${activeDay.date} 서울 날씨`} aria-live="polite">
+            <span className="weather-card__icon" aria-hidden="true">
+              {activeWeatherLabel?.icon ?? (weatherState === "error" ? "—" : "···")}
+            </span>
+            <span className="weather-card__copy">
+              <span>{activeDay.date} 서울 예보</span>
+              {activeWeather && activeWeatherLabel ? (
+                <strong>
+                  {activeWeatherLabel.label} · {Math.round(activeWeather.high)}° / {Math.round(activeWeather.low)}°
+                </strong>
+              ) : (
+                <strong>{weatherState === "error" ? "예보를 확인할 수 없어요" : "날씨를 불러오는 중"}</strong>
+              )}
+            </span>
+            {activeWeather && (
+              <span className="weather-card__rain">비 {activeWeather.rainChance}%</span>
+            )}
+          </section>
+
+          <div className="map-style-switch" role="group" aria-label="지도 종류 선택">
+            <button
+              type="button"
+              className={mapStyle === "street" ? "is-active" : undefined}
+              onClick={() => setMapStyle("street")}
+              aria-pressed={mapStyle === "street"}
+            >
+              일반지도
+            </button>
+            <button
+              type="button"
+              className={mapStyle === "satellite" ? "is-active" : undefined}
+              onClick={() => setMapStyle("satellite")}
+              aria-pressed={mapStyle === "satellite"}
+            >
+              항공사진
+            </button>
+          </div>
         </div>
         <div className="map-legend" aria-label="지도 범례">
-          <span><i className="legend-line" />선택한 날의 이동</span>
           <span><i className="legend-marker">H</i>숙소</span>
           <span><i className="legend-marker legend-marker--dashed" />미정 장소</span>
         </div>

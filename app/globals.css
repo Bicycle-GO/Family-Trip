@@ -81,7 +81,7 @@ button {
   outline-offset: -3px;
 }
 
-.trip-map .leaflet-tile-pane {
+.trip-map .map-tiles--street {
   filter: saturate(0.72) contrast(0.96) brightness(1.03);
 }
 
@@ -146,11 +146,9 @@ button {
   transform: rotate(-8deg) scale(1.12);
 }
 
-.map-caption,
+.weather-card,
+.map-style-switch,
 .map-legend {
-  position: fixed;
-  z-index: 500;
-  right: 22px;
   color: var(--ink);
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(23, 33, 43, 0.12);
@@ -159,27 +157,103 @@ button {
   backdrop-filter: blur(10px);
 }
 
-.map-caption {
+.map-control-stack {
+  position: fixed;
+  z-index: 500;
   top: 22px;
+  right: 22px;
+  display: grid;
+  width: min(310px, calc(100vw - 44px));
+  gap: 8px;
+}
+
+.weather-card {
   display: flex;
   align-items: center;
-  gap: 9px;
-  min-height: 44px;
-  padding: 0 14px;
-  font-size: 13px;
+  min-height: 62px;
+  padding: 10px 12px;
+  gap: 10px;
+}
+
+.weather-card__icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.weather-card__copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.weather-card__copy > span {
+  color: var(--muted);
+  font-size: 10px;
   font-weight: 800;
 }
 
-.map-caption__dot {
-  width: 9px;
-  height: 9px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  background: var(--day-color);
-  box-shadow: 0 0 0 1px var(--day-color);
+.weather-card__copy strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weather-card__rain {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 5px 7px;
+  color: #075985;
+  background: #e0f2fe;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.map-style-switch {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  padding: 4px;
+}
+
+.map-style-switch button {
+  min-height: 36px;
+  padding: 0 12px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.map-style-switch button:hover {
+  color: var(--ink);
+  background: rgba(23, 33, 43, 0.05);
+}
+
+.map-style-switch button:focus-visible {
+  outline: 3px solid var(--day-color);
+  outline-offset: -2px;
+}
+
+.map-style-switch button.is-active {
+  color: #fff;
+  background: var(--ink);
 }
 
 .map-legend {
+  position: fixed;
+  z-index: 500;
+  right: 22px;
   bottom: 26px;
   display: grid;
   gap: 9px;
@@ -193,12 +267,6 @@ button {
   align-items: center;
   gap: 9px;
   white-space: nowrap;
-}
-
-.legend-line {
-  width: 24px;
-  height: 0;
-  border-top: 3px dashed var(--day-color);
 }
 
 .legend-marker {
@@ -705,11 +773,26 @@ button {
     line-height: 38px;
   }
 
-  .map-caption {
+  .map-control-stack {
     top: 12px;
     right: 12px;
-    min-height: 40px;
-    font-size: 11px;
+    width: min(286px, calc(100vw - 76px));
+    gap: 6px;
+  }
+
+  .weather-card {
+    min-height: 54px;
+    padding: 8px 10px;
+  }
+
+  .weather-card__icon {
+    width: 30px;
+    height: 30px;
+    font-size: 21px;
+  }
+
+  .map-style-switch button {
+    min-height: 32px;
   }
 
   .map-legend {
@@ -801,6 +884,14 @@ button {
 }
 
 @media (max-width: 390px) {
+  .map-control-stack {
+    width: min(260px, calc(100vw - 68px));
+  }
+
+  .weather-card__rain {
+    display: none;
+  }
+
   .trip-subtitle {
     font-size: 12px;
   }
