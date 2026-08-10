@@ -72,6 +72,8 @@ const MAP_TILES: Record<
     attribution: string;
     className: string;
     labelUrl?: string;
+    labelAttribution?: string;
+    labelSubdomains?: string;
   }
 > = {
   street: {
@@ -85,7 +87,9 @@ const MAP_TILES: Record<
       "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
     className: "map-tiles--satellite",
     labelUrl:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      "https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png",
+    labelAttribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+    labelSubdomains: "abcd",
   },
 };
 
@@ -161,6 +165,15 @@ function popupMarkup(stop: TripStop, day: DayPlan) {
   return `<div class="map-popup"><span>${day.date} · ${stop.time}</span><strong>${stop.title}</strong><p>${stop.meta}</p></div>`;
 }
 
+function escapeMapLabel(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function statusClass(status: TripStop["status"]) {
   if (status === "예약") return "status status--reservation";
   if (status === "미정") return "status status--pending";
@@ -183,12 +196,16 @@ export function JourneyPlanner() {
     Partial<Record<DayPlan["id"], WeatherForecast>>
   >({});
   const [weatherMeta, setWeatherMeta] = useState<WeatherMeta | null>(null);
+  const [locationState, setLocationState] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
   const mapElementRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const baseLayerRef = useRef<LeafletLayer | null>(null);
   const labelLayerRef = useRef<LeafletLayer | null>(null);
   const baseLayerStyleRef = useRef<MapStyle | null>(null);
   const itineraryLayerRef = useRef<LeafletLayer | null>(null);
+  const locationMarkerRef = useRef<LeafletLayer | null>(null);
   const markerRefs = useRef<Record<string, LeafletLayer>>({});
   const panelRef = useRef<HTMLElement>(null);
   const panelBodyRef = useRef<HTMLDivElement>(null);
@@ -246,7 +263,7 @@ export function JourneyPlanner() {
       .then((L) => {
         if (!mounted || !mapElementRef.current || mapRef.current) return;
         const map = L.map(mapElementRef.current, {
-          zoomControl: true,
+          zoomControl: false,
           scrollWheelZoom: true,
           keyboard: true,
         });
@@ -266,6 +283,8 @@ export function JourneyPlanner() {
 
     return () => {
       mounted = false;
+      locationMarkerRef.current?.remove?.();
+      locationMarkerRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
       baseLayerRef.current = null;
@@ -292,6 +311,8 @@ export function JourneyPlanner() {
     if (tileConfig.labelUrl) {
       labelLayerRef.current = L.tileLayer(tileConfig.labelUrl, {
         maxZoom: 19,
+        attribution: tileConfig.labelAttribution,
+        subdomains: tileConfig.labelSubdomains,
         className: "map-tiles--labels",
       }).addTo(map);
     }
@@ -318,11 +339,15 @@ export function JourneyPlanner() {
       const place = places[placeId];
       const relatedStops = activeDay.stops.filter((stop) => stop.placeId === placeId);
       const primaryStop = relatedStops[0];
+      const placeNameLabel =
+        mapStyle === "satellite"
+          ? `<span class="route-marker-name">${escapeMapLabel(place.name)}</span>`
+          : "";
       const marker = L.marker([place.lat, place.lng], {
         icon: L.divIcon({
-          className: "route-marker-shell",
-          html: `<span class="route-marker${place.provisional ? " route-marker--provisional" : ""}" style="--marker-color:${activeDay.color}"><b>${placeId === "hotel" ? "H" : index + 1}</b></span>`,
-          iconSize: [36, 42],
+          className: `route-marker-shell${mapStyle === "satellite" ? " route-marker-shell--labeled" : ""}`,
+          html: `<span class="route-marker${place.provisional ? " route-marker--provisional" : ""}" style="--marker-color:${activeDay.color}"><b>${placeId === "hotel" ? "H" : index + 1}</b></span>${placeNameLabel}`,
+          iconSize: mapStyle === "satellite" ? [190, 42] : [36, 42],
           iconAnchor: [18, 38],
           popupAnchor: [0, -34],
         }),
@@ -361,7 +386,7 @@ export function JourneyPlanner() {
     });
 
     window.setTimeout(() => map.invalidateSize(), 120);
-  }, [activeDay, isPanelOpen, mapState]);
+  }, [activeDay, isPanelOpen, mapState, mapStyle]);
 
   function changeDay(day: DayPlan) {
     setActiveDayId(day.id);
@@ -384,6 +409,38 @@ export function JourneyPlanner() {
       animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     });
     marker?.openPopup?.();
+  }
+
+  function focusCurrentLocation() {
+    const L = window.L;
+    const map = mapRef.current;
+
+    if (!L || !map || !navigator.geolocation) {
+      setLocationState("error");
+      return;
+    }
+
+    setLocationState("loading");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const location: [number, number] = [coords.latitude, coords.longitude];
+        locationMarkerRef.current?.remove?.();
+        locationMarkerRef.current = L.marker(location, {
+          icon: L.divIcon({
+            className: "current-location-marker-shell",
+            html: '<span class="current-location-marker"><i></i></span>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+          }),
+        }).addTo(map);
+        map.setView(location, 16, {
+          animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+        });
+        setLocationState("ready");
+      },
+      () => setLocationState("error"),
+      { enableHighAccuracy: true, maximumAge: 60_000, timeout: 10_000 },
+    );
   }
 
   return (
@@ -409,24 +466,24 @@ export function JourneyPlanner() {
             <small>일정 목록은 그대로 확인할 수 있습니다.</small>
           </div>
         )}
-        <div className="map-control-stack">
-          <section
-            className="weather-card"
-            aria-label={`${activeDay.date} 서울 날씨`}
-            aria-live="polite"
-            title={weatherMeta?.overall}
+        <div className="map-control-bar" aria-label="지도 도구">
+          <a
+            className="weather-control"
+            href={weatherMeta?.sourceUrl ?? KMA_WEATHER_URL}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`${activeDay.date} 서울 날씨, 기상청 날씨누리에서 보기`}
+            title={`${weatherMeta?.overall ?? "기상청 서울 예보"} · ${weatherMeta ? announcementLabel(weatherMeta.publishedAt) : ""}`}
           >
-            <span className="weather-card__icon" aria-hidden="true">
+            <span className="weather-control__icon" aria-hidden="true">
               {activeWeatherIcon ??
                 (weatherState === "error" ? "—" : weatherState === "ready" ? "⌛" : "···")}
             </span>
-            <span className="weather-card__copy">
-              <span>
-                {activeDay.date} 서울 · {weatherMeta ? announcementLabel(weatherMeta.publishedAt) : "기상청 발표"}
-              </span>
+            <span className="weather-control__copy" aria-live="polite">
+              <small>날씨정보</small>
               {activeWeather ? (
                 <strong>
-                  {activeWeather.condition} · 최고 {activeWeather.high}° / 최저 {activeWeather.low}°
+                  {activeWeather.condition} · 최고 {activeWeather.high.replaceAll(" ", "")}°
                 </strong>
               ) : (
                 <strong>
@@ -434,43 +491,44 @@ export function JourneyPlanner() {
                     ? "예보를 확인할 수 없어요"
                     : weatherState === "ready"
                       ? "기상청 예보 발표 대기"
-                      : "날씨를 불러오는 중"}
+                  : "날씨를 불러오는 중"}
                 </strong>
               )}
             </span>
-            <a
-              className="weather-card__source"
-              href={weatherMeta?.sourceUrl ?? KMA_WEATHER_URL}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="기상청 날씨누리에서 서울 예보 보기"
-            >
-              날씨누리 <span aria-hidden="true">↗</span>
-            </a>
-          </section>
+          </a>
 
-          <div className="map-style-switch" role="group" aria-label="지도 종류 선택">
+          <div className="map-mode-controls" role="group" aria-label="지도 종류 선택">
             <button
               type="button"
               className={mapStyle === "street" ? "is-active" : undefined}
               onClick={() => setMapStyle("street")}
               aria-pressed={mapStyle === "street"}
+              title="일반 지도 보기"
             >
-              일반지도
+              <span className="map-control-icon map-control-icon--map" aria-hidden="true" />
+              <span>지도</span>
             </button>
             <button
               type="button"
               className={mapStyle === "satellite" ? "is-active" : undefined}
               onClick={() => setMapStyle("satellite")}
               aria-pressed={mapStyle === "satellite"}
+              title="지명이 표시되는 항공사진 보기"
             >
-              항공사진
+              <span className="map-control-icon map-control-icon--satellite" aria-hidden="true" />
+              <span>스카이뷰</span>
             </button>
           </div>
-        </div>
-        <div className="map-legend" aria-label="지도 범례">
-          <span><i className="legend-marker">H</i>숙소</span>
-          <span><i className="legend-marker legend-marker--dashed" />미정 장소</span>
+
+          <button
+            type="button"
+            className={`location-control location-control--${locationState}`}
+            onClick={focusCurrentLocation}
+            aria-label={locationState === "loading" ? "현재 위치를 찾는 중" : "현재 위치로 이동"}
+            title={locationState === "error" ? "현재 위치를 확인할 수 없습니다" : "현재 위치"}
+          >
+            <span className="map-control-icon map-control-icon--location" aria-hidden="true" />
+          </button>
         </div>
       </section>
 

@@ -87,6 +87,7 @@ button {
 
 .trip-map .map-tiles--labels {
   pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.76));
 }
 
 .trip-map .leaflet-control-zoom {
@@ -150,157 +151,191 @@ button {
   transform: rotate(-8deg) scale(1.12);
 }
 
-.weather-card,
-.map-style-switch,
-.map-legend {
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(23, 33, 43, 0.12);
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(23, 33, 43, 0.12);
-  backdrop-filter: blur(10px);
-}
-
-.map-control-stack {
+.map-control-bar {
   position: fixed;
   z-index: 500;
   top: 22px;
   right: 22px;
-  display: grid;
-  width: min(310px, calc(100vw - 44px));
-  gap: 8px;
+  display: flex;
+  align-items: stretch;
+  min-height: 48px;
+  overflow: hidden;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(23, 33, 43, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(23, 33, 43, 0.12);
+  backdrop-filter: blur(10px);
 }
 
-.weather-card {
+.weather-control {
   display: flex;
   align-items: center;
-  min-height: 62px;
-  padding: 10px 12px;
-  gap: 10px;
+  width: min(260px, 31vw);
+  min-width: 190px;
+  gap: 8px;
+  padding: 6px 11px;
+  color: var(--ink);
+  border-right: 1px solid var(--line);
+  text-decoration: none;
 }
 
-.weather-card__icon {
+.weather-control:hover {
+  background: #f7f9f8;
+}
+
+.weather-control:focus-visible,
+.map-mode-controls button:focus-visible,
+.location-control:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid var(--day-color);
+  outline-offset: -3px;
+}
+
+.weather-control__icon {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  font-size: 24px;
+  width: 28px;
+  height: 28px;
+  font-size: 21px;
   line-height: 1;
 }
 
-.weather-card__copy {
+.weather-control__copy {
   display: grid;
   min-width: 0;
-  gap: 3px;
+  gap: 1px;
 }
 
-.weather-card__copy > span {
+.weather-control__copy small {
   color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
+  font-size: 9px;
+  font-weight: 850;
 }
 
-.weather-card__copy strong {
+.weather-control__copy strong {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.weather-card__source {
-  flex: 0 0 auto;
-  margin-left: auto;
-  padding: 5px 6px;
-  color: #075985;
-  background: #e0f2fe;
-  border-radius: 999px;
-  font-size: 9px;
-  font-weight: 900;
-  text-decoration: none;
-  white-space: nowrap;
+.map-mode-controls {
+  display: flex;
+  align-items: stretch;
 }
 
-.weather-card__source:hover {
-  background: #bae6fd;
-}
-
-.weather-card__source:focus-visible {
-  outline: 3px solid var(--day-color);
-  outline-offset: 2px;
-}
-
-.map-style-switch {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  padding: 4px;
-}
-
-.map-style-switch button {
-  min-height: 36px;
-  padding: 0 12px;
+.map-mode-controls button,
+.location-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  gap: 6px;
+  padding: 0 11px;
   color: var(--muted);
-  background: transparent;
+  background: #fff;
   border: 0;
-  border-radius: 4px;
+  border-right: 1px solid var(--line);
   cursor: pointer;
   font-size: 11px;
   font-weight: 850;
 }
 
-.map-style-switch button:hover {
+.map-mode-controls button:hover,
+.location-control:hover {
   color: var(--ink);
-  background: rgba(23, 33, 43, 0.05);
+  background: #f1f5f9;
 }
 
-.map-style-switch button:focus-visible {
-  outline: 3px solid var(--day-color);
-  outline-offset: -2px;
-}
-
-.map-style-switch button.is-active {
+.map-mode-controls button.is-active {
   color: #fff;
-  background: var(--ink);
+  background: #1478e8;
 }
 
-.map-legend {
-  position: fixed;
-  z-index: 500;
-  right: 22px;
-  bottom: 26px;
-  display: grid;
-  gap: 9px;
-  padding: 12px 14px;
-  font-size: 11px;
-  font-weight: 700;
+.location-control {
+  min-width: 48px;
+  width: 48px;
+  padding: 0;
+  border-right: 0;
 }
 
-.map-legend span {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  white-space: nowrap;
+.map-control-icon {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  color: currentColor;
 }
 
-.legend-marker {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  color: #fff;
-  border: 2px solid #fff;
+.map-control-icon--map {
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  background:
+    linear-gradient(90deg, transparent 31%, currentColor 32% 36%, transparent 37% 64%, currentColor 65% 69%, transparent 70%);
+  clip-path: polygon(0 12%, 32% 0, 68% 12%, 100% 0, 100% 88%, 68% 100%, 32% 88%, 0 100%);
+}
+
+.map-control-icon--satellite {
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  background:
+    linear-gradient(45deg, transparent 45%, currentColor 46% 54%, transparent 55%),
+    linear-gradient(-45deg, transparent 45%, currentColor 46% 54%, transparent 55%);
+  transform: rotate(-8deg);
+}
+
+.map-control-icon--satellite::after {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  border-radius: 0 0 6px;
+  content: "";
+}
+
+.map-control-icon--location {
+  border: 1.5px solid currentColor;
   border-radius: 50%;
-  background: var(--day-color);
-  box-shadow: 0 0 0 1px var(--day-color);
-  font-style: normal;
-  font-size: 9px;
+  background:
+    linear-gradient(currentColor, currentColor) center top / 1px 4px no-repeat,
+    linear-gradient(currentColor, currentColor) center bottom / 1px 4px no-repeat,
+    linear-gradient(90deg, currentColor, currentColor) left center / 4px 1px no-repeat,
+    linear-gradient(90deg, currentColor, currentColor) right center / 4px 1px no-repeat;
 }
 
-.legend-marker--dashed {
-  background: #fff;
-  border: 2px dashed var(--day-color);
-  box-shadow: none;
+.map-control-icon--location::after {
+  position: absolute;
+  inset: 5px;
+  background: currentColor;
+  border-radius: 50%;
+  content: "";
+}
+
+.location-control--ready {
+  color: #1478e8;
+}
+
+.location-control--error {
+  color: #b42318;
+}
+
+.location-control--loading .map-control-icon {
+  animation: location-pulse 900ms ease-in-out infinite alternate;
+}
+
+@keyframes location-pulse {
+  to {
+    opacity: 0.35;
+    transform: scale(0.88);
+  }
 }
 
 .panel-reopen-button {
@@ -881,6 +916,7 @@ button {
 }
 
 .route-marker-shell {
+  position: relative;
   background: transparent;
   border: 0;
 }
@@ -914,6 +950,65 @@ button {
   color: var(--marker-color);
   background: #fff;
   border: 3px dashed var(--marker-color);
+}
+
+.route-marker-name {
+  position: absolute;
+  top: 7px;
+  left: 41px;
+  max-width: 140px;
+  overflow: hidden;
+  color: #fff;
+  font-family: Pretendard, "Noto Sans KR", "Malgun Gothic", sans-serif;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.92),
+    1px -1px 0 rgba(0, 0, 0, 0.92),
+    -1px 1px 0 rgba(0, 0, 0, 0.92),
+    1px 1px 0 rgba(0, 0, 0, 0.92),
+    0 2px 4px rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.current-location-marker-shell {
+  background: transparent;
+  border: 0;
+}
+
+.current-location-marker {
+  position: relative;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  background: rgba(20, 120, 232, 0.2);
+  border-radius: 50%;
+  animation: current-location-wave 1.8s ease-out infinite;
+}
+
+.current-location-marker i {
+  display: block;
+  width: 13px;
+  height: 13px;
+  background: #1478e8;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 7px rgba(13, 62, 113, 0.38);
+}
+
+@keyframes current-location-wave {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(20, 120, 232, 0.34);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(20, 120, 232, 0);
+  }
 }
 
 .map-popup {
@@ -968,45 +1063,50 @@ button {
     height: 100svh;
   }
 
-  .trip-map .leaflet-control-zoom {
-    margin-top: 70px;
-    margin-right: 12px;
+  .map-control-bar {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    min-height: 44px;
   }
 
-  .trip-map .leaflet-control-zoom a {
-    width: 40px;
-    height: 40px;
-    line-height: 38px;
+  .weather-control {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    padding: 5px 8px;
   }
 
-  .map-control-stack {
-    top: 12px;
-    right: 12px;
-    width: min(286px, calc(100vw - 76px));
-    gap: 6px;
+  .weather-control__icon {
+    width: 24px;
+    height: 24px;
+    font-size: 19px;
   }
 
-  .trip-app--panel-hidden .map-control-stack {
-    width: min(286px, calc(100vw - 128px));
+  .weather-control__copy strong {
+    font-size: 10px;
   }
 
-  .weather-card {
-    min-height: 54px;
-    padding: 8px 10px;
+  .map-mode-controls button {
+    min-width: 60px;
+    gap: 5px;
+    padding: 0 8px;
+    font-size: 10px;
   }
 
-  .weather-card__icon {
-    width: 30px;
-    height: 30px;
-    font-size: 21px;
+  .location-control {
+    min-width: 42px;
+    width: 42px;
   }
 
-  .map-style-switch button {
-    min-height: 32px;
+  .map-control-icon {
+    width: 15px;
+    height: 15px;
   }
 
-  .map-legend {
-    display: none;
+  .route-marker-name {
+    max-width: 118px;
+    font-size: 10px;
   }
 
   .panel-reopen-button {
@@ -1147,14 +1247,25 @@ button {
 }
 
 @media (max-width: 390px) {
-  .map-control-stack {
-    width: min(260px, calc(100vw - 68px));
+  .weather-control {
+    gap: 5px;
+    padding-right: 6px;
+    padding-left: 6px;
   }
 
-  .weather-card__source {
-    padding-right: 5px;
-    padding-left: 5px;
-    font-size: 8px;
+  .weather-control__copy small {
+    display: none;
+  }
+
+  .map-mode-controls button {
+    min-width: 56px;
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+  .location-control {
+    min-width: 40px;
+    width: 40px;
   }
 
   .trip-subtitle {
