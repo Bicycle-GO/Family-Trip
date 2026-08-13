@@ -101,7 +101,7 @@ function statusClass(status: TripStop["status"]) {
 
 export function JourneyPlanner() {
   const [activeDayId, setActiveDayId] = useState<DayPlan["id"]>("day1");
-  const [selectedStopId, setSelectedStopId] = useState("d1-history");
+  const [selectedStopId, setSelectedStopId] = useState("d1-hotel");
   const [mapState, setMapState] = useState<"loading" | "ready" | "error">(
     "loading",
   );
@@ -375,9 +375,19 @@ export function JourneyPlanner() {
           </ol>
 
           <footer className="panel-footer">
-            <strong>출발 전 마지막 확인</strong>
-            <p>8월 11일에 날씨, 궁궐 운영 공지와 실시간 교통을 다시 확인하세요.</p>
-            <span>식당과 전주 출발지는 아직 확정되지 않았습니다.</span>
+            {activeDay.id === "day1" ? (
+              <>
+                <strong>첫날의 여행 기록</strong>
+                <p>계획을 바꿔 숙소 가까이에서 쉬고 걷고, 가족과 함께 여유로운 오후를 보냈습니다.</p>
+                <span>기록에 없는 세부 시각은 실제 흐름에 맞춰 표현했습니다.</span>
+              </>
+            ) : (
+              <>
+                <strong>출발 전 마지막 확인</strong>
+                <p>날씨, 궁궐 운영 공지와 실시간 교통을 다시 확인하세요.</p>
+                <span>식당과 일부 이동 시간은 현장 상황에 따라 조정할 수 있습니다.</span>
+              </>
+            )}
           </footer>
         </div>
       </aside>

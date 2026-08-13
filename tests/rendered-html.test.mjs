@@ -34,7 +34,8 @@ test("server-renders the trip planner shell", async () => {
   assert.match(html, /<html[^>]*lang="ko"/i);
   assert.match(html, /서울 역사 가족여행/);
   assert.match(html, /8\.12/);
-  assert.match(html, /대한민국역사박물관/);
+  assert.match(html, /서울식물원/);
+  assert.match(html, /오봉집/);
   assert.match(html, /8\.13/);
   assert.match(html, /8\.14/);
   assert.doesNotMatch(html, /codex-preview|Building your site/);
@@ -53,7 +54,10 @@ test("keeps all three days in source and removes the starter preview", async () 
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.match(tripData, /창덕궁 후원/);
   assert.match(tripData, /허준박물관/);
-  assert.match(tripData, /time: "07:00"/);
+  assert.match(tripData, /time: "14:00경"/);
+  assert.match(tripData, /지하 4층 주차/);
+  assert.match(tripData, /낙지볶음 2인분/);
+  assert.match(tripData, /딸과 호텔 수영장/);
   assert.match(tripData, /time: "16:00–17:10"/);
   assert.match(tripData, /서대문형무소역사관/);
   assert.match(tripData, /전쟁기념관/);
