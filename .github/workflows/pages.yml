@@ -28,7 +28,11 @@ jobs:
           cache: npm
 
       - name: Install dependencies
+<<<<<<< HEAD
         run: npm install --no-audit --no-fund
+=======
+        run: npm ci
+>>>>>>> 580e1e10f3cca38dfc53b47b6bd9c9f4268ca05f
 
       - name: Build static site
         run: npm run build:pages
