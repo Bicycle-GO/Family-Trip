@@ -42,11 +42,12 @@ test("server-renders the trip planner shell", async () => {
 });
 
 test("keeps all three days in source and removes the starter preview", async () => {
-  const [page, layout, packageJson, tripData] = await Promise.all([
+  const [page, layout, packageJson, tripData, planner] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../app/trip-data.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/JourneyPlanner.tsx", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /JourneyPlanner/);
@@ -58,9 +59,13 @@ test("keeps all three days in source and removes the starter preview", async () 
   assert.match(tripData, /지하 4층 주차/);
   assert.match(tripData, /낙지볶음 2인분/);
   assert.match(tripData, /딸과 호텔 수영장/);
+  assert.match(tripData, /얼음이 모두 떨어져 커피는 마시지 못했습니다/);
+  assert.match(tripData, /공항철도 → 홍대입구 환승 → 경복궁/);
+  assert.match(tripData, /time: "13:00–14:00경"/);
   assert.match(tripData, /time: "16:00–17:10"/);
   assert.match(tripData, /서대문형무소역사관/);
   assert.match(tripData, /전쟁기념관/);
   assert.match(tripData, /time: "20:00"/);
+  assert.doesNotMatch(planner, /^(<<<<<<<|=======|>>>>>>>)/m);
   await assert.rejects(access(new URL("../app/_sites-preview", templateRoot)));
 });
