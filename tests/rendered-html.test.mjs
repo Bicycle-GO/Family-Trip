@@ -64,6 +64,11 @@ test("keeps all three days in source and removes the starter preview", async () 
   assert.match(tripData, /time: "점심 무렵–15:20경"/);
   assert.match(tripData, /창덕궁 해설 관람 · 약 1시간/);
   assert.match(tripData, /time: "16:00–17:00경"/);
+  assert.match(tripData, /안국역 6번 출구로 나오면 바로 인사동 거리가 시작/);
+  assert.match(tripData, /둘째 딸도 함께 청계천에 발을 담그며/);
+  assert.match(tripData, /영풍문고 종각종로본점/);
+  assert.match(tripData, /인사동으로 돌아와 손수건 구입/);
+  assert.doesNotMatch(tripData, /익선동/);
   assert.doesNotMatch(tripData, /경복궁/);
   assert.match(tripData, /서대문형무소역사관/);
   assert.match(tripData, /전쟁기념관/);
